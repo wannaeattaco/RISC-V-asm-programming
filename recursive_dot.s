@@ -1,42 +1,59 @@
 .data
 a: .word 1, 2, 3, 4, 5
 b: .word 6, 7, 8, 9, 10
-newline: .string "The dot product is: "
+newline: .asciiz "The dot product is: "
 
 .text
 main:
-    li x6, 5 # 5
-    addi x7, x0, 0 # i = 0
-    addi x8, x0, 0 # sop = 0
-    la x9, a # loading the address of a --> x9 (32 bits register)
-    la x10, b # loading the address of a --> x10 (32 bits register)
+    la a0, a
+    la a1, b
+    addi a2, x0, 5
+    jal dot_product_recursive 
+    j exit
 
-loop:
-    bge x7, x6, exit # i >= 5 --> exit
-    # i
-    slli x18, x7, 2 # set x18 to i*4
+dot_product_recursive:
+    addi sp, sp, -16 # Prepare Stack Pointer
+    sw ra, 0(sp) 
+    sw a0, 4(sp) 
+    sw a1, 8(sp) 
+    sw a2, 12(sp) 
+    addi t0, x0, 1 # t0 = temporary 1
+    beq a2, t0, base_case
     
-    add x19, x18, x9 # add i*4 to the base address of a and put it to x19
-    lw x22, 0(x19)
+    addi a0, a0, 4 # a + 1
+    addi a1, a1, 4 # b + 1
+    addi a2, a2, -1 # size - 1
+    jal dot_product_recursive
+    lw ra, 0(sp) 
+    lw t0, 4(sp) 
+    lw t1, 8(sp) 
+    lw t2, 12(sp) 
+    addi sp, sp, 16 # Reset stack pointer
+    lw t3, 0(t0) 
+    lw t4, 0(t1)
+    mul t5, t3, t4 
+    add a0, a0, t5 
+    jr ra
     
-    add x20, x18, x10 # add i*4 to the base address of b and put it to x20
-    lw x23, 0(x20)
-    
-    mul x21, x22, x23  # a[i] * b[i]
-    add x8, x8, x21  # sop += a[i] * b[i]
-    
-    addi x7, x7, 1 # i++
-    jal loop
+base_case:
+    # Base Case
+    addi sp, sp, 16 # Reset stack pointer
+    lw t1, 0(a0) # a[0]
+    lw t2, 0(a1) # b[0]
+    mul a0, t1, t2 # a[0]*b[0]
+    jr ra
     
 exit:
+    mv t0, a0
+    
     # print a newline character; use print_string
     addi a0, x0, 4
     la a1, newline
     ecall
     
     # print_int; sop
+    mv a1, t0
     addi a0, x0, 1
-    add a1, x0, x8
     ecall
     
     # exit cleanly
